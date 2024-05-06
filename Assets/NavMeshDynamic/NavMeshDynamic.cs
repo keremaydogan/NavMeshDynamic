@@ -1,5 +1,9 @@
 using System;
 using System.Collections.Generic;
+using Unity.Burst;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
+using Unity.Jobs;
 using UnityEngine;
 
 
@@ -115,20 +119,28 @@ public class NavMeshDynamic : MonoBehaviour
     WorkEnqueueDlg[][] workEnqueueFuncs;
     WorkDlg[][] workFuncs;
 
+    bool[][] workDoneFlags;
+    int[][] workCurrPoints;
+
     List<Vector2Int>[] areaNewElmBuffers;
     List<int> chunkAllYsByXZ;
 
     public float maxSlopeAngle;
 
+    [Range(4f, 10000f)]
+    public float allowedWorkTimeMs;
+
     // GUI
     string guiStr;
 
-    // GIZMOS
+    [Header("Gizmos")]
     public bool drawTris;
     public Vector3Int drawTrisChunkCenter;
     public bool followTarget;
 
     public Vector3Int[] drawTrisChunkOffsets;
+
+    System.Diagnostics.Stopwatch stopwatch;
 
     #endregion FIELDS
 
@@ -190,11 +202,22 @@ public class NavMeshDynamic : MonoBehaviour
 
         workQueues = new Queue<ChunkListIndex>[chunkTracker.Areas.Length][];
         areaNewElmBuffers = new List<Vector2Int>[chunkTracker.Areas.Length];
+
+        workDoneFlags = new bool[chunkTracker.Areas.Length][];
+        workCurrPoints = new int[chunkTracker.Areas.Length][];
+
         for (int level = 0; level < workQueues.Length; level++) 
         {
             workQueues[level] = new Queue<ChunkListIndex>[workFuncs[level].Length];
+
+            workDoneFlags[level] = new bool[workFuncs[level].Length];
+            workCurrPoints[level] = new int[workFuncs[level].Length];
+
             for (int order = 0; order < workQueues[level].Length; order++) {
                 workQueues[level][order] = new Queue<ChunkListIndex>();
+
+                workDoneFlags[level][order] = false;
+                workCurrPoints[level][order] = 0;
             }
 
             areaNewElmBuffers[level] = new List<Vector2Int>();
@@ -211,6 +234,7 @@ public class NavMeshDynamic : MonoBehaviour
 
         chunkTracker.DumpAreaBuffers(ref areaNewElmBuffers, true);
 
+        stopwatch = new System.Diagnostics.Stopwatch();
 
         // POOL
         verticesList = new List<Vector3>();
@@ -380,13 +404,35 @@ public class NavMeshDynamic : MonoBehaviour
 
     void WorksRunner(int level)
     {
+        System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
         for (int order = 0; order < workFuncs[level].Length; order++)
         {
             if (workQueues[level][order].Count == 0)
             {
                 continue;
             }
-            workFuncs[level][order](workQueues[level][order].Dequeue());
+
+            stopwatch.Restart();
+            workFuncs[level][order](workQueues[level][order].Peek());
+            stopwatch.Stop();
+
+            if (workDoneFlags[level][order])
+            {
+                workQueues[level][order].Dequeue();
+                workDoneFlags[level][order] = false;
+                workCurrPoints[level][order] = 0;
+            }
+
+            float elapsed = stopwatch.ElapsedMilliseconds;
+            if(elapsed > 200)
+            {
+                Debug.LogWarning("l: " + level + " o: " + order + " : " + workFuncs[level][order].Method.Name + ": " + (elapsed).ToString() + "ms");
+            }
+            else
+            {
+                Debug.Log("l: " + level + " o: " + order + " : " + workFuncs[level][order].Method.Name + ": " + (elapsed).ToString() + "ms");
+            }
+            
             break;
         }
     }
@@ -467,6 +513,7 @@ public class NavMeshDynamic : MonoBehaviour
 
         meshInfo.triangles = newTriangles;
 
+        workDoneFlags[3][0] = true;
     }
 
 
@@ -484,6 +531,7 @@ public class NavMeshDynamic : MonoBehaviour
             
         }
 
+        workDoneFlags[3][1] = true;
     }
 
 
@@ -500,6 +548,7 @@ public class NavMeshDynamic : MonoBehaviour
             meshInfo.vertices[i] = RoundVector3XZ(meshInfo.vertices[i], vertexMergeThreshold);
         }
 
+        workDoneFlags[3][2] = true;
     }
 
 
@@ -511,12 +560,23 @@ public class NavMeshDynamic : MonoBehaviour
     {
         MeshInfo meshInfo = meshColInstIDToInfo[meshColInstID];
         Vector3 vertex;
-        for (int i = 0; i < meshInfo.vertices.Length; i++)
+
+        stopwatch.Restart();
+        for (int i = workCurrPoints[3][3]; i < meshInfo.vertices.Length; i++)
         {
             vertex = meshInfo.vertices[i];
 
             meshInfo.verticesCLInds[i] = vertices.AddElement(vertex, vertex);
+
+            if(stopwatch.ElapsedMilliseconds > allowedWorkTimeMs)
+            {
+                stopwatch.Stop();
+                workCurrPoints[3][3] = i;
+                return;
+            }
         }
+
+        workDoneFlags[3][3] = true;
     }
 
 
@@ -554,6 +614,8 @@ public class NavMeshDynamic : MonoBehaviour
                 }
             }
         }
+
+        workDoneFlags[2][0] = true;
     }
 
 
@@ -588,18 +650,29 @@ public class NavMeshDynamic : MonoBehaviour
 
         ChunkListIndex originalCLIndex;
 
-        for(int i = 0; i < meshInfo.verticesCLInds.Length; i++)
+        stopwatch.Restart();
+        for(int i = workCurrPoints[1][0]; i < meshInfo.verticesCLInds.Length; i++)
         {
             originalCLIndex = meshInfo.verticesCLInds[i];
 
             if (verticesMergeInfo.ContainsKey(originalCLIndex.ChunkIndex, new Vector2Int(originalCLIndex.LeafIndex, originalCLIndex.ListIndex)))
             {
                 meshInfo.verticesCLInds[i].ListIndex = verticesMergeInfo.GetElement(originalCLIndex.ChunkIndex, new Vector2Int(originalCLIndex.LeafIndex, originalCLIndex.ListIndex));
+
+                verticesMergeInfo.RemoveKey(originalCLIndex.ChunkIndex, new Vector2Int(originalCLIndex.LeafIndex, originalCLIndex.ListIndex));
+            }
+
+            if(stopwatch.ElapsedMilliseconds > allowedWorkTimeMs)
+            {
+                workCurrPoints[1][0] = i;
+                return;
             }
 
         }
-        meshInfo.GenerateTrianglesCLInds();
+        stopwatch.Stop();
 
+        meshInfo.GenerateTrianglesCLInds();
+        workDoneFlags[1][0] = true;
     }
 
 
@@ -609,7 +682,7 @@ public class NavMeshDynamic : MonoBehaviour
     }
     void AddTriangles(int meshColInstID)
     {
-        
+
         ChunkListIndex[] trianglesCLInds = meshColInstIDToInfo[meshColInstID].trianglesCLInds;
 
         ChunkListIndex cLIndex;
@@ -618,7 +691,8 @@ public class NavMeshDynamic : MonoBehaviour
 
         NodeTri nodeTri;
 
-        for(int i = 0; i < trianglesCLInds.Length; i += 3)
+        stopwatch.Restart();
+        for(int i = workCurrPoints[1][1]; i < trianglesCLInds.Length; i += 3)
         {
             center = vertices.GetElement(trianglesCLInds[i]) + vertices.GetElement(trianglesCLInds[i + 1]) + vertices.GetElement(trianglesCLInds[i + 2]);
             center /= 3;
@@ -644,8 +718,16 @@ public class NavMeshDynamic : MonoBehaviour
                 }
 
             }
+            
+            if(stopwatch.ElapsedMilliseconds > allowedWorkTimeMs)
+            {
+                stopwatch.Stop();
+                workCurrPoints[1][1] = i;
+                return;
+            }
         }
 
+        workDoneFlags[1][1] = true;
     }
 
     
@@ -686,33 +768,6 @@ public class NavMeshDynamic : MonoBehaviour
                 }
 
 
-                // TWO CORNERS
-                //for (int c1 = 0; c1 < 3; c1++)
-                //{
-                //    if (cornerToTris[c1] == null) { continue; }
-
-                //    for (int c2 = c1 + 1; c2 < 3; c2++)
-                //    {
-                //        if (cornerToTris[c2] == null) { continue; }
-
-                //        for (int c1Count = 0; c1Count < cornerToTris[c1].Count; c1Count++)
-                //        {
-                //            for (int c2Count = 0; c2Count < cornerToTris[c2].Count; c2Count++)
-                //            {
-
-                //                if (cornerToTris[c1][c1Count].Equals(cornerToTris[c2][c2Count]))
-                //                {
-                //                    triCLI = cornerToTris[c1][c1Count];
-                //                    triangles.GetLeaf(new ChunkListIndex(cLIndex.ChunkIndex, leafInd, 0))[listInd].AddNeighbor(triCLI);
-                //                    triangles.GetLeaf(new ChunkListIndex(triCLI.ChunkIndex, triCLI.LeafIndex, 0))[triCLI.ListIndex].AddNeighbor(new ChunkListIndex(cLIndex.ChunkIndex, leafInd, listInd));
-                //                }
-
-                //            }
-                //        }
-                //    }
-                //}
-
-
                 //ONE CORNER
                 for (int c1 = 0; c1 < 3; c1++)
                 {
@@ -737,6 +792,7 @@ public class NavMeshDynamic : MonoBehaviour
 
         }
 
+        workDoneFlags[0][0] = true;
     }
 
 
@@ -876,10 +932,6 @@ public class NavMeshDynamic : MonoBehaviour
 
                 }
             }
-            
-
-            
-           
         }
     }
 

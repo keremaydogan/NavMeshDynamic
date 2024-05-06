@@ -64,10 +64,6 @@ public class ChunkListOcTree<T>
 
     Dictionary<Vector2Int, List<int>> chunksGroupedByXZ;
 
-    Vector3Int leafIndexV3;
-    Vector3Int newLeafIndV3;
-    Vector3Int newChunkIndex;
-
     public Dictionary<Vector2Int, List<int>> ChunksGroupedByXZ { get { return chunksGroupedByXZ; } }
 
 
@@ -222,6 +218,17 @@ public class ChunkListOcTree<T>
     }
 
 
+    public bool ChangeElement(ChunkListIndex index, T newVal)
+    {
+        if (chunks[index.ChunkIndex] == null || chunks[index.ChunkIndex][index.LeafIndex] == null || chunks[index.ChunkIndex][index.LeafIndex].Count <= index.ListIndex)
+        {
+            return false;
+        }
+
+        chunks[index.ChunkIndex][index.LeafIndex][index.ListIndex] = newVal;
+        return true;
+    }
+
     public List<T> GetLeaf(ChunkListIndex index)
     {
         return chunks[index.ChunkIndex][index.LeafIndex];
@@ -247,6 +254,12 @@ public class ChunkListOcTree<T>
     }
 
 
+    public bool IsChunkExists(Vector3Int chunkIndex)
+    {
+        return chunks.ContainsKey(chunkIndex);
+    }
+
+    
     public void RemoveFromLeaf(ChunkListIndex chunkListInd, T elm)
     {
         try
@@ -308,13 +321,13 @@ public class ChunkListOcTree<T>
     }
 
 
-    Vector3Int GetChunkIndex(Vector3 position)
+    public Vector3Int GetChunkIndex(Vector3 position)
     {
         return new Vector3Int(Mathf.FloorToInt(position.x / chunkSize), Mathf.FloorToInt(position.y / chunkSize), Mathf.FloorToInt(position.z / chunkSize));
     }
 
 
-    Vector3Int GetChunkIndex(Vector3 position, out Vector3 remPos)
+    public Vector3Int GetChunkIndex(Vector3 position, out Vector3 remPos)
     {
         Vector3Int chunkIndex = new Vector3Int(Mathf.FloorToInt(position.x / chunkSize), Mathf.FloorToInt(position.y / chunkSize), Mathf.FloorToInt(position.z / chunkSize));
         remPos = position - (chunkSize * chunkIndex);

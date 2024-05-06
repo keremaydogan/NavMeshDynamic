@@ -78,6 +78,19 @@ public class ChunkDictionary<K,V>
         
     }
 
+    public void RemoveKey(Vector3Int chunkIndex, K key)
+    {
+        try
+        {
+            chunks[chunkIndex].Remove(key);
+        }
+        catch (KeyNotFoundException)
+        {
+            return;
+        }
+
+    }
+
     public V GetElement(Vector3Int chunkIndex, K key)
     {
         try
@@ -99,6 +112,12 @@ public class ChunkDictionary<K,V>
     {
         chunks[chunkIndex] = null;
         chunks.Remove(chunkIndex);
+    }
+
+
+    public bool IsChunkExists(Vector3Int chunkIndex)
+    {
+        return chunks.ContainsKey(chunkIndex);
     }
 
 
