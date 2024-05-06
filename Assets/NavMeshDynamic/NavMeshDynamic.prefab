@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &4466940954647084536
+--- !u!1 &1252873643432726843
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,9 +8,9 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 4466940954647084537}
-  - component: {fileID: 4466940954647084518}
-  - component: {fileID: 4466940954647084519}
+  - component: {fileID: 4989712456972425768}
+  - component: {fileID: 579820191284477783}
+  - component: {fileID: 7653445225901070102}
   m_Layer: 0
   m_Name: NavMeshDynamic
   m_TagString: Untagged
@@ -18,28 +18,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &4466940954647084537
+--- !u!4 &4989712456972425768
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4466940954647084536}
+  m_GameObject: {fileID: 1252873643432726843}
+  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4466940954647084518
+--- !u!114 &579820191284477783
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4466940954647084536}
+  m_GameObject: {fileID: 1252873643432726843}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bb7ae574dd4a13c40a26f8c62bf401ef, type: 3}
@@ -48,7 +48,7 @@ MonoBehaviour:
   chunkSize: 60
   meshLayers:
     serializedVersion: 2
-    m_Bits: 2147483712
+    m_Bits: 64
   IsMapExpanding: 0
   vertexMergeThreshold: 2
   follow: {fileID: 0}
@@ -56,17 +56,19 @@ MonoBehaviour:
     chunkReachWidths: 01000000010000000100000001000000
     currChunk: {x: 0, y: 0, z: 0}
   maxSlopeAngle: 45
-  drawTris: 1
+  allowedWorkTimeMs: 4
+  drawTris: 0
   drawTrisChunkCenter: {x: 0, y: 0, z: 0}
   followTarget: 1
-  drawTrisChunkOffsets: []
---- !u!114 &4466940954647084519
+  drawTrisChunkOffsets:
+  - {x: 0, y: 0, z: 0}
+--- !u!114 &7653445225901070102
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4466940954647084536}
+  m_GameObject: {fileID: 1252873643432726843}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 065a3096a33859c40ba0f68c15259f18, type: 3}
