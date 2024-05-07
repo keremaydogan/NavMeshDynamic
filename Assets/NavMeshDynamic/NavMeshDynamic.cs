@@ -4,6 +4,7 @@ using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
+using Unity.VisualScripting;
 using UnityEngine;
 
 
@@ -145,6 +146,14 @@ public class NavMeshDynamic : MonoBehaviour
     #endregion FIELDS
 
 
+    #region JOBS
+
+    ArrangeVerticesJob arrangeVerticesJob;
+    MarkInvalidTrianglesJobs markInvalidTrianglesJobs;
+
+    #endregion JOBS
+
+
     #region POOL VARIABLES
 
     // GenerateVerticesMergeInfo
@@ -154,7 +163,7 @@ public class NavMeshDynamic : MonoBehaviour
 
     HashSet<Vector2Int> checkedCornerKeys;
 
-    #endregion
+    #endregion POOL VARIABLES
 
 
     private void Start()
@@ -188,14 +197,14 @@ public class NavMeshDynamic : MonoBehaviour
         meshColFoundInstanceIDs = new HashSet<int>();
 
         workFuncs = new WorkDlg[chunkTracker.Areas.Length][];
-        workFuncs[3] = new WorkDlg[] { EliminateInvalidTriangles, VerticesLocalToWorld, ArrangeVertices, AddVerticesFromMeshInfo };
+        workFuncs[3] = new WorkDlg[] { EliminateInvalidTrianglesUsingJobs, ArrangeVerticesUsingJobs, AddVerticesFromMeshInfo };
         workFuncs[2] = new WorkDlg[] { GenerateVerticesMergeInfo };
         workFuncs[1] = new WorkDlg[] { MergeVertices, AddTriangles };
         workFuncs[0] = new WorkDlg[] { TrianglesAddNeighbors };
 
 
         workEnqueueFuncs = new WorkEnqueueDlg[chunkTracker.Areas.Length][];
-        workEnqueueFuncs[3] = new WorkEnqueueDlg[] { WorkEnqueueMeshChunk, WorkEnqueueMeshChunk, WorkEnqueueMeshChunk, WorkEnqueueMeshChunk };
+        workEnqueueFuncs[3] = new WorkEnqueueDlg[] { WorkEnqueueMeshChunk, WorkEnqueueMeshChunk, WorkEnqueueMeshChunk };
         workEnqueueFuncs[2] = new WorkEnqueueDlg[] { WorkEnqueueVertices };
         workEnqueueFuncs[1] = new WorkEnqueueDlg[] { WorkEnqueueMeshChunk, WorkEnqueueMeshChunk };
         workEnqueueFuncs[0] = new WorkEnqueueDlg[] { WorkEnqueueTriangles };
@@ -235,6 +244,10 @@ public class NavMeshDynamic : MonoBehaviour
         chunkTracker.DumpAreaBuffers(ref areaNewElmBuffers, true);
 
         stopwatch = new System.Diagnostics.Stopwatch();
+
+        // JOBS
+        arrangeVerticesJob = new ArrangeVerticesJob();
+        markInvalidTrianglesJobs = new MarkInvalidTrianglesJobs();
 
         // POOL
         verticesList = new List<Vector3>();
@@ -277,7 +290,6 @@ public class NavMeshDynamic : MonoBehaviour
         }
 
     }
-
 
 
     void AreaBufferToWorkQueue(int level)
@@ -424,7 +436,7 @@ public class NavMeshDynamic : MonoBehaviour
             }
 
             float elapsed = stopwatch.ElapsedMilliseconds;
-            if(elapsed > 200)
+            if(elapsed > 20)
             {
                 Debug.LogWarning("l: " + level + " o: " + order + " : " + workFuncs[level][order].Method.Name + ": " + (elapsed).ToString() + "ms");
             }
@@ -517,21 +529,65 @@ public class NavMeshDynamic : MonoBehaviour
     }
 
 
-    void VerticesLocalToWorld(ChunkListIndex cLIndex, int level, int order)
+    void EliminateInvalidTrianglesUsingJobs(ChunkListIndex cLIndex, int level, int order)
     {
-        VerticesLocalToWorld(cLIndex.ListIndex, level, order);
+        EliminateInvalidTrianglesUsingJobs(cLIndex.ListIndex, level, order);
     }
-    void VerticesLocalToWorld(int meshColInstID, int level, int order)
+    void EliminateInvalidTrianglesUsingJobs(int meshColInstID, int level, int order)
     {
         MeshInfo meshInfo = meshColInstIDToInfo[meshColInstID];
 
-        for (int i = 0; i < meshInfo.vertices.Length; i++)
+        markInvalidTrianglesJobs.vertices = new NativeArray<Vector3>(meshInfo.vertices, Allocator.Persistent);
+        markInvalidTrianglesJobs.triangles = new NativeArray<int>(meshInfo.triangles, Allocator.Persistent);
+        markInvalidTrianglesJobs.maxSlopeAngel = maxSlopeAngle;
+
+        JobHandle jobHandle = markInvalidTrianglesJobs.Schedule(meshInfo.triangles.Length, 60);
+
+        jobHandle.Complete();
+
+        markInvalidTrianglesJobs.triangles.CopyTo(meshInfo.triangles);
+
+        markInvalidTrianglesJobs.vertices.Dispose();
+        markInvalidTrianglesJobs.triangles.Dispose();
+
+        int nextTriplet = 0;
+        for(int i = 0; i < meshInfo.triangles.Length; i += 3)
         {
-            meshInfo.vertices[i] = meshInfo.transform.TransformPoint(meshInfo.vertices[i]);
-            
+            if (meshInfo.triangles[i] != -1)
+            {
+                meshInfo.triangles[nextTriplet] = meshInfo.triangles[i];
+                meshInfo.triangles[nextTriplet + 1] = meshInfo.triangles[i + 1];
+                meshInfo.triangles[nextTriplet + 2] = meshInfo.triangles[i + 2];
+                nextTriplet += 3;
+            }
         }
 
+        Array.Resize(ref meshInfo.triangles, nextTriplet);
+
         workDoneFlags[level][order] = true;
+    }
+
+    // NOTE: I apply this very bad practice becasue if I do it as:
+    // https://prnt.sc/RSEsx6oKzYRE
+    // naturally I get:
+    // https://prnt.sc/UT4Nzcbc4o5L
+    struct MarkInvalidTrianglesJobs : IJobParallelFor
+    {
+        [ReadOnly]
+        public NativeArray<Vector3> vertices;
+
+        public NativeArray<int> triangles;
+
+        public float maxSlopeAngel;
+
+        public void Execute(int index)
+        {
+            if(index % 3 == 0 && maxSlopeAngel > CalculateNormal(vertices[triangles[index]], vertices[triangles[index + 1]], vertices[triangles[index + 2]]))
+            {
+                triangles[index] = -1;
+            }
+
+        }
     }
 
 
@@ -545,10 +601,49 @@ public class NavMeshDynamic : MonoBehaviour
 
         for (int i = 0; i < meshInfo.vertices.Length; i++)
         {
-            meshInfo.vertices[i] = RoundVector3XZ(meshInfo.vertices[i], vertexMergeThreshold);
+            meshInfo.vertices[i] = RoundVector3XZ(meshInfo.transform.TransformPoint(meshInfo.vertices[i]), vertexMergeThreshold);
         }
 
         workDoneFlags[level][order] = true;
+    }
+
+
+    void ArrangeVerticesUsingJobs(ChunkListIndex cLIndex, int level, int order)
+    {
+        ArrangeVerticesUsingJobs(cLIndex.ListIndex, level, order);
+    }
+    void ArrangeVerticesUsingJobs(int meshColInstID, int level, int order)
+    {
+        MeshInfo meshInfo = meshColInstIDToInfo[meshColInstID];
+
+        arrangeVerticesJob.vertices = new NativeArray<Vector3>(meshInfo.vertices, Allocator.Persistent);
+        arrangeVerticesJob.localToWorldMatrix = meshInfo.transform.localToWorldMatrix;
+        arrangeVerticesJob.vertexMergeThreshold = vertexMergeThreshold;
+
+        JobHandle jobHandle = arrangeVerticesJob.Schedule(meshInfo.vertices.Length, 64);
+
+        jobHandle.Complete();
+
+        arrangeVerticesJob.vertices.CopyTo(meshInfo.vertices);
+
+        arrangeVerticesJob.vertices.Dispose();
+
+        workDoneFlags[level][order] = true;
+    }
+
+
+    struct ArrangeVerticesJob : IJobParallelFor
+    {
+        public NativeArray<Vector3> vertices;
+
+        public Matrix4x4 localToWorldMatrix;
+
+        public float vertexMergeThreshold;
+
+        public void Execute(int index)
+        {
+            vertices[index] = RoundVector3XZ(localToWorldMatrix.MultiplyPoint3x4(vertices[index]), vertexMergeThreshold);
+        }
     }
 
 
@@ -629,7 +724,7 @@ public class NavMeshDynamic : MonoBehaviour
 
         for (int i = 0; i < checkUpTo; i++)
         {
-            if (IsVerticesNear(verticesList[i], vertex))
+            if (IsVerticesNear(verticesList[i], vertex, vertexMergeThreshold))
             {
                 return i;
             }
@@ -808,36 +903,36 @@ public class NavMeshDynamic : MonoBehaviour
     }
 
 
-    float CalculateNormal(Vector3 v0, Vector3 v1, Vector3 v2)
+    static float CalculateNormal(Vector3 v0, Vector3 v1, Vector3 v2)
     {
         Vector3 cross = Vector3.Cross(v1 - v0, v2 - v0);
         return Mathf.Abs(Vector3.SignedAngle(Vector3.up, cross, new Vector3(-cross.z, 0, cross.x)));
     }
 
 
-    Vector3 RoundVector3(Vector3 v3, float roundTo)
+    static Vector3 RoundVector3(Vector3 v3, float roundTo)
     {
         return new Vector3(RoundToNearestFloat(v3.x, roundTo), RoundToNearestFloat(v3.y, roundTo), RoundToNearestFloat(v3.z, roundTo));
     }
 
 
-    Vector3 RoundVector3XZ(Vector3 v3, float roundTo)
+    static Vector3 RoundVector3XZ(Vector3 v3, float roundTo)
     {
         return new Vector3(RoundToNearestFloat(v3.x, roundTo), v3.y, RoundToNearestFloat(v3.z, roundTo));
     }
 
 
-    bool IsVerticesNear(Vector3 v1, Vector3 v2)
+    static bool IsVerticesNear(Vector3 v1, Vector3 v2, float threshold)
     {
         return (
             v1.x == v2.x &&
             v1.z == v2.z &&
-            (Mathf.Abs(v1.y - v2.y) < vertexMergeThreshold)
+            (Mathf.Abs(v1.y - v2.y) < threshold)
             );
     }
 
 
-    float RoundToNearestFloat(float f, float roundTo)
+    static float RoundToNearestFloat(float f, float roundTo)
     {
         return Mathf.Round(f / roundTo) * roundTo;
     }
