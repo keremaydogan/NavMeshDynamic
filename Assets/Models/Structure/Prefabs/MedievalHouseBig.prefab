@@ -11,7 +11,7 @@ PrefabInstance:
     - target: {fileID: 5991322387319414441, guid: cb873bdd073a24146a76d5356aa1944b,
         type: 3}
       propertyPath: m_Name
-      value: MedievalHouseBig Variant
+      value: MedievalHouseBig
       objectReference: {fileID: 0}
     - target: {fileID: 6372210135585293331, guid: cb873bdd073a24146a76d5356aa1944b,
         type: 3}
@@ -66,5 +66,37 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 5991322387319414441, guid: cb873bdd073a24146a76d5356aa1944b,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: -2416482479782909392}
   m_SourcePrefab: {fileID: 100100000, guid: cb873bdd073a24146a76d5356aa1944b, type: 3}
+--- !u!1 &4522115526965644333 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5991322387319414441, guid: cb873bdd073a24146a76d5356aa1944b,
+    type: 3}
+  m_PrefabInstance: {fileID: 7918660663169520260}
+  m_PrefabAsset: {fileID: 0}
+--- !u!64 &-2416482479782909392
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4522115526965644333}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -4085542598650377539, guid: 8beaee32ba8c2cf46baeddfe0189906a, type: 3}

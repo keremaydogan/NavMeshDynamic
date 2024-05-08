@@ -7,6 +7,7 @@ using Unity.Jobs;
 using Unity.VisualScripting;
 using UnityEngine;
 
+using nmdJobs = NavMeshDynamicJobs.NavMeshDynamicJobs;
 
 
 public class NavMeshDynamic : MonoBehaviour
@@ -148,8 +149,8 @@ public class NavMeshDynamic : MonoBehaviour
 
     #region JOBS
 
-    ArrangeVerticesJob arrangeVerticesJob;
-    MarkInvalidTrianglesJobs markInvalidTrianglesJobs;
+    nmdJobs.ArrangeVerticesJob arrangeVerticesJob;
+    nmdJobs.MarkInvalidTrianglesJobs markInvalidTrianglesJobs;
 
     #endregion JOBS
 
@@ -246,8 +247,8 @@ public class NavMeshDynamic : MonoBehaviour
         stopwatch = new System.Diagnostics.Stopwatch();
 
         // JOBS
-        arrangeVerticesJob = new ArrangeVerticesJob();
-        markInvalidTrianglesJobs = new MarkInvalidTrianglesJobs();
+        arrangeVerticesJob = new nmdJobs.ArrangeVerticesJob();
+        markInvalidTrianglesJobs = new nmdJobs.MarkInvalidTrianglesJobs();
 
         // POOL
         verticesList = new List<Vector3>();
@@ -436,13 +437,19 @@ public class NavMeshDynamic : MonoBehaviour
             }
 
             float elapsed = stopwatch.ElapsedMilliseconds;
-            if(elapsed > 20)
+
+            if(elapsed > allowedWorkTimeMs)
             {
                 Debug.LogWarning("l: " + level + " o: " + order + " : " + workFuncs[level][order].Method.Name + ": " + (elapsed).ToString() + "ms");
             }
             else
             {
                 Debug.Log("l: " + level + " o: " + order + " : " + workFuncs[level][order].Method.Name + ": " + (elapsed).ToString() + "ms");
+            }
+
+            if(elapsed < allowedWorkTimeMs)
+            {
+                continue;
             }
             
             break;
@@ -541,7 +548,7 @@ public class NavMeshDynamic : MonoBehaviour
         markInvalidTrianglesJobs.triangles = new NativeArray<int>(meshInfo.triangles, Allocator.Persistent);
         markInvalidTrianglesJobs.maxSlopeAngel = maxSlopeAngle;
 
-        JobHandle jobHandle = markInvalidTrianglesJobs.Schedule(meshInfo.triangles.Length, 60);
+        JobHandle jobHandle = markInvalidTrianglesJobs.Schedule(meshInfo.triangles.Length / 3, 64);
 
         jobHandle.Complete();
 
@@ -565,29 +572,6 @@ public class NavMeshDynamic : MonoBehaviour
         Array.Resize(ref meshInfo.triangles, nextTriplet);
 
         workDoneFlags[level][order] = true;
-    }
-
-    // NOTE: I apply this very bad practice becasue if I do it as:
-    // https://prnt.sc/RSEsx6oKzYRE
-    // naturally I get:
-    // https://prnt.sc/UT4Nzcbc4o5L
-    struct MarkInvalidTrianglesJobs : IJobParallelFor
-    {
-        [ReadOnly]
-        public NativeArray<Vector3> vertices;
-
-        public NativeArray<int> triangles;
-
-        public float maxSlopeAngel;
-
-        public void Execute(int index)
-        {
-            if(index % 3 == 0 && maxSlopeAngel > CalculateNormal(vertices[triangles[index]], vertices[triangles[index + 1]], vertices[triangles[index + 2]]))
-            {
-                triangles[index] = -1;
-            }
-
-        }
     }
 
 
@@ -629,21 +613,6 @@ public class NavMeshDynamic : MonoBehaviour
         arrangeVerticesJob.vertices.Dispose();
 
         workDoneFlags[level][order] = true;
-    }
-
-
-    struct ArrangeVerticesJob : IJobParallelFor
-    {
-        public NativeArray<Vector3> vertices;
-
-        public Matrix4x4 localToWorldMatrix;
-
-        public float vertexMergeThreshold;
-
-        public void Execute(int index)
-        {
-            vertices[index] = RoundVector3XZ(localToWorldMatrix.MultiplyPoint3x4(vertices[index]), vertexMergeThreshold);
-        }
     }
 
 
@@ -759,6 +728,7 @@ public class NavMeshDynamic : MonoBehaviour
 
             if(stopwatch.ElapsedMilliseconds > allowedWorkTimeMs)
             {
+                stopwatch.Stop();
                 workCurrPoints[level][order] = i;
                 return;
             }
@@ -837,9 +807,13 @@ public class NavMeshDynamic : MonoBehaviour
 
         ChunkListIndex cornerCLI, triCLI;
 
-        checkedCornerKeys.Clear();
+        if (workCurrPoints[level][order] == 0)
+        {
+            checkedCornerKeys.Clear();
+        }
 
-        for(int leafInd = 0; leafInd < leafCount; leafInd++)
+        stopwatch.Restart();
+        for(int leafInd = workCurrPoints[level][order]; leafInd < leafCount; leafInd++)
         {
             triList = triangles.GetLeaf(new ChunkListIndex(cLIndex.ChunkIndex, leafInd, 0));
             if(triList == null) { continue; }
@@ -884,6 +858,13 @@ public class NavMeshDynamic : MonoBehaviour
 
             }
 
+            if (stopwatch.ElapsedMilliseconds > allowedWorkTimeMs)
+            {
+                stopwatch.Stop();
+                workCurrPoints[level][order] = leafInd;
+                return;
+            }
+
         }
 
         workDoneFlags[level][order] = true;
@@ -907,12 +888,6 @@ public class NavMeshDynamic : MonoBehaviour
     {
         Vector3 cross = Vector3.Cross(v1 - v0, v2 - v0);
         return Mathf.Abs(Vector3.SignedAngle(Vector3.up, cross, new Vector3(-cross.z, 0, cross.x)));
-    }
-
-
-    static Vector3 RoundVector3(Vector3 v3, float roundTo)
-    {
-        return new Vector3(RoundToNearestFloat(v3.x, roundTo), RoundToNearestFloat(v3.y, roundTo), RoundToNearestFloat(v3.z, roundTo));
     }
 
 
