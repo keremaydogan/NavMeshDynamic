@@ -8,7 +8,7 @@ NMD distributes the work needed to generate NavMesh (such as reading meshes, mer
 
 ## Performance
 
-In the upcoming weeks, the NavMeshDynamic Tool will integrate the Job system and Burst compiler for enhanced performance. Leveraging these technologies, the tool will efficiently distribute tasks across threads, maximizing parallel processing capabilities. Additionally, optimizations will focus on reducing memory overhead and improving computational efficiency, ensuring smooth operation even in resource-intensive scenarios. Overall, these enhancements aim to elevate the tool's performance, making it well-suited for real-time generation of NavMesh in dynamic and expansive game environments.
+The NavMeshDynamic Tool integrates the Job system and Burst compiler for enhanced performance. Leveraging these technologies, the tool efficiently distributes tasks across threads, maximizing parallel processing capabilities. Additionally, optimizations will focus on reducing memory overhead and improving computational efficiency, ensuring smooth operation even in resource-intensive scenarios. Overall, these enhancements aim to elevate the tool's performance, making it well-suited for real-time generation of NavMesh in dynamic and expansive game environments.
 
 
 
