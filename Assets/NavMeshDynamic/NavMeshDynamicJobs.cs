@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
 using UnityEngine;
@@ -10,6 +11,7 @@ namespace NavMeshDynamicJobs
     public static class NavMeshDynamicJobs
     {
 
+        [BurstCompile]
         public struct ArrangeVerticesJob : IJobParallelFor
         {
             public NativeArray<Vector3> vertices;
@@ -29,6 +31,7 @@ namespace NavMeshDynamicJobs
         // https://prnt.sc/RSEsx6oKzYRE
         // naturally I get:
         // https://prnt.sc/UT4Nzcbc4o5L
+        [BurstCompile]
         public struct MarkInvalidTrianglesJobs : IJobParallelFor
         {
             [ReadOnly]

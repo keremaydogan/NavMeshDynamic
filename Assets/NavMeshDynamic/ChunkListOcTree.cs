@@ -6,6 +6,7 @@ using Unity.Mathematics;
 using UnityEngine;
 
 using GeneralHelper;
+using UnityEngine.UIElements;
 
 
 public struct ChunkListIndex
@@ -97,43 +98,12 @@ public class ChunkListOcTree<T>
 
     ChunkListIndex AddElementWithDepth(T element, Vector3 position)
     {
-        Vector3Int chunkIndex;
+
+        ChunkListIndex resultCLI = CalculateChunkLeafIndex(position);
+
+        Vector3Int chunkIndex = resultCLI.ChunkIndex;
+        int leafIndex = resultCLI.LeafIndex;
         int listIndex;
-        Vector3 posInChunk;
-        Vector3Int leafIndexV3 = Vector3Int.zero;
-        int leafIndex;
-
-        chunkIndex = GetChunkIndex(position, out posInChunk);
-
-        int chunkSizeVar = chunkSize;
-        int dimOffset = dimension;
-
-        for (int i = 0; i < depth; i++)
-        {
-            chunkSizeVar = chunkSizeVar >> 1;
-            dimOffset = dimOffset >> 1;
-
-            if (posInChunk.x >= chunkSizeVar)
-            {
-                posInChunk.x -= chunkSizeVar;
-                leafIndexV3.x += dimOffset;
-            }
-
-            if (posInChunk.y >= chunkSizeVar)
-            {
-                posInChunk.y -= chunkSizeVar;
-                leafIndexV3.y += dimOffset;
-            }
-
-            if (posInChunk.z >= chunkSizeVar)
-            {
-                posInChunk.z -= chunkSizeVar;
-                leafIndexV3.z += dimOffset;
-            }
-
-        }
-
-        leafIndex = leafIndexV3.x * dimensionSqr + leafIndexV3.y * dimension + leafIndexV3.z;
 
         try
         {
@@ -332,6 +302,49 @@ public class ChunkListOcTree<T>
         Vector3Int chunkIndex = new Vector3Int(Mathf.FloorToInt(position.x / chunkSize), Mathf.FloorToInt(position.y / chunkSize), Mathf.FloorToInt(position.z / chunkSize));
         remPos = position - (chunkSize * chunkIndex);
         return chunkIndex;
+    }
+
+
+    public ChunkListIndex CalculateChunkLeafIndex(Vector3 position)
+    {
+        Vector3Int chunkIndex;
+        Vector3 posInChunk;
+        Vector3Int leafIndexV3 = Vector3Int.zero;
+        int leafIndex;
+
+        chunkIndex = GetChunkIndex(position, out posInChunk);
+
+        int chunkSizeVar = chunkSize;
+        int dimOffset = dimension;
+
+        for (int i = 0; i < depth; i++)
+        {
+            chunkSizeVar = chunkSizeVar >> 1;
+            dimOffset = dimOffset >> 1;
+
+            if (posInChunk.x >= chunkSizeVar)
+            {
+                posInChunk.x -= chunkSizeVar;
+                leafIndexV3.x += dimOffset;
+            }
+
+            if (posInChunk.y >= chunkSizeVar)
+            {
+                posInChunk.y -= chunkSizeVar;
+                leafIndexV3.y += dimOffset;
+            }
+
+            if (posInChunk.z >= chunkSizeVar)
+            {
+                posInChunk.z -= chunkSizeVar;
+                leafIndexV3.z += dimOffset;
+            }
+
+        }
+
+        leafIndex = leafIndexV3.x * dimensionSqr + leafIndexV3.y * dimension + leafIndexV3.z;
+
+        return new ChunkListIndex(chunkIndex, leafIndex, -1);
     }
 
 

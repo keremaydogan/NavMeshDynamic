@@ -60,7 +60,7 @@ public class AirCameraController : MonoBehaviour
             run = 1f;
         }
 
-        movement = run * movementSpeed * (movZ * transform.forward + movX * transform.right + Input.mouseScrollDelta.y * transform.up);
+        movement = run * movementSpeed * (movZ * transform.forward + movX * transform.right + Input.mouseScrollDelta.y * Vector3.up);
 
         transform.position += movement * Time.deltaTime;
 

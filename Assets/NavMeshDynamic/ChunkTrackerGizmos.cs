@@ -15,8 +15,8 @@ public class ChunkTrackerGizmos : MonoBehaviour
 
     private void Awake()
     {
-        chunkTracker = GetComponent<NavMeshDynamic>().chunkTracker;
-        chunkSize = GetComponent<NavMeshDynamic>().chunkSize;
+        chunkTracker = GetComponent<NavMeshDynamicGenerator>().chunkTracker;
+        chunkSize = GetComponent<NavMeshDynamicGenerator>().chunkSize;
         chunkCenterOffset = new Vector3(chunkSize/2, 0, chunkSize/2);
         chunkReachAreas = new List<Vector2Int>[0];
     }
