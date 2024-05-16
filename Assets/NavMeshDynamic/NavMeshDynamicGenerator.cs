@@ -169,8 +169,6 @@ public class NavMeshDynamicGenerator : MonoBehaviour
     List<Vector2Int>[] areaNewElmBuffers;
     List<int> chunkAllYsByXZ;
 
-    RaycastHit wayChecker;
-
     // GUI
     string guiStr;
 
@@ -273,11 +271,11 @@ public class NavMeshDynamicGenerator : MonoBehaviour
         }
 
 
-        vertices = new ChunkListOcTree<Vector3>(chunkSize, 3);
+        vertices = new ChunkListOcTree<Vector3>(chunkSize, 2);
 
         verticesMergeInfo = new ChunkDictionary<Vector2Int, int>(chunkSize);
 
-        triangles = new ChunkListOcTree<NodeTri>(chunkSize, 3);
+        triangles = new ChunkListOcTree<NodeTri>(chunkSize, 2);
 
         cornerToTriangle = new ChunkDictionary<Vector2Int, List<ChunkListIndex>>();
 
@@ -871,6 +869,8 @@ public class NavMeshDynamicGenerator : MonoBehaviour
             checkedCornerKeys.Clear();
         }
 
+        RaycastHit hit;
+
         stopwatch.Restart();
         for(int leafInd = workCurrPoints[level][order]; leafInd < leafCount; leafInd++)
         {
@@ -894,7 +894,7 @@ public class NavMeshDynamicGenerator : MonoBehaviour
                     cornerToTris[i] = cornerToTriangle.GetElement(cornerCLI.ChunkIndex, new Vector2Int(cornerCLI.LeafIndex, cornerCLI.ListIndex));
                 }
 
-                /*
+                
                 //ONE CORNER
                 for (int c = 0; c < 3; c++)
                 {
@@ -909,24 +909,27 @@ public class NavMeshDynamicGenerator : MonoBehaviour
 
                         direction = triCenter2 - triCenter1;
 
-                        //if(!Physics.SphereCast(triCenter1 + yOffset, radius, direction, out wayChecker, direction.magnitude, meshLayers))
-                        if(!Physics.Raycast(triCenter1 + yOffset, direction, out wayChecker, direction.magnitude, meshLayers))
+                        //if (!Physics.SphereCast(new Ray(triCenter1 + yOffset, direction), radius, direction.magnitude, meshLayers))
+                        if (!Physics.Raycast(new Ray(triCenter1 + yOffset, direction), out hit, direction.magnitude + 0.5f, meshLayers))
                         {
+                            //Debug.DrawRay(triCenter1 + yOffset, direction, Color.green, 120);
                             triangles.GetLeaf(new ChunkListIndex(cLIndex.ChunkIndex, leafInd, 0))[listInd].AddNeighbor(triCLI);
                             triangles.GetLeaf(new ChunkListIndex(triCLI.ChunkIndex, triCLI.LeafIndex, 0))[triCLI.ListIndex].AddNeighbor(new ChunkListIndex(cLIndex.ChunkIndex, leafInd, listInd));
                         }
+                        else
+                        {
+                            Debug.DrawRay(triCenter1 + yOffset, direction, Color.red, 120);
+                        }
 
-                        
-                        
                     }
                 }
-
+                
                 for (int i = 0; i < triList[listInd].CornerIndices.Length; i++)
                 {
                     cornerCLI = triList[listInd].CornerIndices[i];
                     cornerToTriangle.RemoveElement(cornerCLI.ChunkIndex, new Vector2Int(cornerCLI.LeafIndex, cornerCLI.ListIndex));
                 }
-                */
+                
 
             }
 
@@ -1051,6 +1054,7 @@ public class NavMeshDynamicGenerator : MonoBehaviour
 
                     for (int j = 0; j < tris[i].Count; j++)
                     {
+
                         Gizmos.color = Color.magenta;
                         for (int k = 0; k < 2; k++)
                         {
@@ -1066,7 +1070,6 @@ public class NavMeshDynamicGenerator : MonoBehaviour
                         }
 
                     }
-
                 }
             }
         }

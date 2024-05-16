@@ -12,14 +12,6 @@ using UnityEngine.UIElements;
 public struct ChunkListIndex
 {
 
-    //  LEAF NUMBERS EXAMPLE (3 depth in 2D space):
-    //  CHUNK:
-    //  [ 0 ]  [ 1 ]  [ 2 ]  [ 3 ] 
-    //  [ 4 ]  [ 5 ]  [ 6 ]  [ 7 ] 
-    //  [ 8 ]  [ 9 ]  [ 10 ] [ 11 ] 
-    //  [ 12 ] [ 13 ] [ 14 ] [ 15 ] 
-
-
     Vector3Int chunkIndex;
     public Vector3Int ChunkIndex { get { return chunkIndex; } set { chunkIndex = value; } }
 
@@ -57,6 +49,8 @@ public class ChunkListOcTree<T>
 
     int dimensionSqr;
 
+    public int Dimension { get { return dimension; } }
+
     public int LeafCount { get { return dimension * dimensionSqr; } }
 
     Dictionary<Vector3Int, List<T>[]> chunks;
@@ -68,17 +62,17 @@ public class ChunkListOcTree<T>
     public Dictionary<Vector2Int, List<int>> ChunksGroupedByXZ { get { return chunksGroupedByXZ; } }
 
 
-    public ChunkListOcTree(ushort chunkSize = 64, ushort maxDepth = 1)
+    public ChunkListOcTree(ushort chunkSize = 64, ushort depth = 1)
     {
         this.chunkSize = chunkSize;
 
-        this.depth = maxDepth;
+        this.depth = depth;
 
         chunks = new Dictionary<Vector3Int, List<T>[]>();
 
         chunksGroupedByXZ = new Dictionary<Vector2Int, List<int>>();
 
-        if(maxDepth == 0)
+        if(depth == 0)
         {
             dimension = 1;
 
@@ -86,7 +80,7 @@ public class ChunkListOcTree<T>
         }
         else
         {
-            dimension = 1 << maxDepth;
+            dimension = 1 << depth;
 
             AddElement = AddElementWithDepth;
         }
@@ -184,6 +178,11 @@ public class ChunkListOcTree<T>
             Debug.Log("LEAF EXISTS: " + (chunks[index.ChunkIndex][index.LeafIndex] != null));
             Debug.Log("LIST ITEM EXISTS: " + (index.ListIndex < chunks[index.ChunkIndex][index.LeafIndex].Count) + " -> " + index.ListIndex + " < " + chunks[index.ChunkIndex][index.LeafIndex].Count);
         }
+        catch (KeyNotFoundException)
+        {
+            Debug.Log("CHUNK EXISTS: " + chunks.ContainsKey(index.ChunkIndex));
+            
+        }
         return chunks[index.ChunkIndex][index.LeafIndex][index.ListIndex];
     }
 
@@ -201,7 +200,20 @@ public class ChunkListOcTree<T>
 
     public List<T> GetLeaf(ChunkListIndex index)
     {
-        return chunks[index.ChunkIndex][index.LeafIndex];
+        List<T> r;
+        try 
+        { 
+            r = chunks[index.ChunkIndex][index.LeafIndex]; 
+        }
+        catch (NullReferenceException)
+        {
+            r = null;
+        }
+        catch (KeyNotFoundException)
+        {
+            r = null;
+        }
+        return r;
     }
 
     public void GetLeaf(ChunkListIndex index, ref List<T> refList)
