@@ -10,7 +10,7 @@ public class NavMeshDynamicAgent : MonoBehaviour
 
     struct NodeAStar
     {
-        int prev;
+        public int prev;
         public ChunkListIndex cli;
         public Vector3 pos;
         public float G;
@@ -33,8 +33,6 @@ public class NavMeshDynamicAgent : MonoBehaviour
     public float agentWidth;
     public float agentHeight;
     public float agentPerceptionRadius;
-
-    System.Diagnostics.Stopwatch stopwatch;
 
     #region AStar
 
@@ -63,8 +61,6 @@ public class NavMeshDynamicAgent : MonoBehaviour
     private void Start()
     {
         
-        stopwatch = new System.Diagnostics.Stopwatch();
-
         #region AStar
 
         openList = new List<NodeAStar>();
@@ -101,12 +97,9 @@ public class NavMeshDynamicAgent : MonoBehaviour
         startCLI = FindClosestPointCLI(startPos);
         destinationCLI = FindClosestPointCLI(destinationPos);
 
-        if (startCLI.ListIndex == -1 || destinationCLI.ListIndex == -1) { return; }
+        if(startCLI.Equals(destinationCLI)) { return; }
 
-        NodeTri nodeTri = nmdGen.Triangles.GetElement(startCLI);
-        Debug.DrawLine(nodeTri.Center, nodeTri.Center + Vector3.up * 2, Color.green);
-        nodeTri = nmdGen.Triangles.GetElement(destinationCLI);
-        Debug.DrawLine(nodeTri.Center, nodeTri.Center + Vector3.up * 2, Color.green);
+        if (startCLI.ListIndex == -1 || destinationCLI.ListIndex == -1) { return; }
 
         AStar(startCLI, destinationCLI);
 
@@ -165,8 +158,6 @@ public class NavMeshDynamicAgent : MonoBehaviour
         checkedTris.Clear();
         checkedNodes.Clear();
 
-        stopwatch.Start();
-
         int lowestFIndex;
         
         Vector3 destinationPos = nmdGen.Triangles.GetElement(destinationCLI).Center;
@@ -179,23 +170,23 @@ public class NavMeshDynamicAgent : MonoBehaviour
         {
             lowestFIndex = GetLowestFIndex();
 
-            AddAdjacentNodes(lowestFIndex, destinationCLI, destinationPos);
+            AddAdjacentNodes(lowestFIndex, closedList.Count, destinationCLI, destinationPos);
 
             closedList.Add(openList[lowestFIndex]);
             openList.RemoveAt(lowestFIndex);
 
             tryCount++;
 
-            if(tryCount > TryCountMax || openList.Count == 0 || stopwatch.ElapsedMilliseconds > 10000 )
+            if(isDestinationReached || tryCount > TryCountMax || openList.Count == 0)
             {
                 break;
             }
         }
-
+        
         if(isDestinationReached) {
             GeneratePath();
         }
-
+        
     }
 
 
@@ -219,32 +210,26 @@ public class NavMeshDynamicAgent : MonoBehaviour
     }
 
 
-    void AddAdjacentNodes(int index, ChunkListIndex destinationCLI, Vector3 destinationPos)
+    void AddAdjacentNodes(int openListIndex, int closedListIndex, ChunkListIndex destinationCLI, Vector3 destinationPos)
     {
 
-        NodeAStar node = openList[index];
+        NodeAStar node = openList[openListIndex];
         NodeTri nodeTri = nmdGen.Triangles.GetElement(node.cli);
         Vector3 neighborPos;
 
         foreach(ChunkListIndex neighborCLI in nodeTri.Neighbors)
         {
-            if (checkedTris.Contains(neighborCLI))
-            {
-                continue;
-            }
+            if(checkedTris.Contains(neighborCLI)) { continue; }
 
             checkedTris.Add(neighborCLI);
 
             neighborPos = nmdGen.Triangles.GetElement(neighborCLI).Center;
 
-            if(Vector3.Distance(transform.position, neighborPos) > agentPerceptionRadius)
-            {
-                continue;
-            }
+            if(Vector3.Distance(transform.position, neighborPos) > agentPerceptionRadius) { continue; }
 
-            openList.Add(new NodeAStar(neighborCLI, neighborPos, index, node.G + Vector3.Distance(node.pos, neighborPos), Vector3.Distance(neighborPos, destinationPos)));
-            Debug.DrawLine(nodeTri.Center, nodeTri.Center + Vector3.up * 2, Color.green, 1f);
-            Debug.DrawLine(nodeTri.Center, openList[openList.Count - 1].pos, Color.green, 1f);
+            openList.Add(new NodeAStar(neighborCLI, neighborPos, closedListIndex, node.G + Vector3.Distance(node.pos, neighborPos), Vector3.Distance(neighborPos, destinationPos)));
+            Debug.DrawLine(nodeTri.Center, nodeTri.Center + Vector3.up * 2, Color.green);
+            Debug.DrawLine(nodeTri.Center, openList[openList.Count - 1].pos, Color.green);
 
             if (neighborCLI.Equals(destinationCLI))
             {
@@ -259,28 +244,34 @@ public class NavMeshDynamicAgent : MonoBehaviour
     {
         path.Clear();
 
-        Vector3 origin = closedList[0].pos;
+        Vector3 origin;
         Vector3 direction;
 
         Vector3 yOffset = Vector3.up * (agentHeight / 2);
         float radius = agentWidth / 2;
 
-        path.Add(origin);
+        int ind = closedList.Count - 1;
+        int prev;
 
-        for (int i = 1; i < closedList.Count; i++)
+        while(ind > 0)
         {
-            direction = closedList[i].pos - origin;
-            
-            //if (!Physics.SphereCast(new Ray(origin + yOffset, direction), radius, direction.magnitude, groundLayers))
-            if (!Physics.Raycast(new Ray(origin + yOffset, direction), direction.magnitude, groundLayers)) 
+            origin = closedList[ind].pos;
+            path.Add(origin);
+
+            prev = closedList[ind].prev;
+            direction = closedList[prev].pos - origin;
+
+            while (!Physics.SphereCast(new Ray(origin + yOffset, direction), radius, direction.magnitude, groundLayers) && ind > 0)
             {
-                origin = closedList[i - 1].pos;
-                path.Add(origin);
+                ind = prev;
+                prev = closedList[ind].prev;
+                direction = closedList[prev].pos - origin;
+
             }
 
         }
-
-        path.Add(closedList[closedList.Count - 1].pos);
+        path.Add(closedList[0].pos);
+        path.Reverse();
 
     }
 

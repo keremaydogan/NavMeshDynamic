@@ -861,7 +861,7 @@ public class NavMeshDynamicGenerator : MonoBehaviour
 
         Vector3 triCenter1, triCenter2;
         Vector3 direction;
-        Vector3 yOffset = Vector3.up * (agentHeight / 2);
+        Vector3 yOffset = Vector3.up * (agentHeight / 2 + 0.1f);
         float radius = agentWidth / 2;
 
         if (workCurrPoints[level][order] == 0)
@@ -909,16 +909,13 @@ public class NavMeshDynamicGenerator : MonoBehaviour
 
                         direction = triCenter2 - triCenter1;
 
-                        //if (!Physics.SphereCast(new Ray(triCenter1 + yOffset, direction), radius, direction.magnitude, meshLayers))
-                        if (!Physics.Raycast(new Ray(triCenter1 + yOffset, direction), out hit, direction.magnitude + 0.5f, meshLayers))
+                        //if (Physics.OverlapSphere(triCenter1 + yOffset + 0.1f * Vector3.up, radius, meshLayers).Length == 0
+                        //    &&
+                        //    !Physics.SphereCast(new Ray(triCenter1 + yOffset + 0.1f * Vector3.up, direction), radius, direction.magnitude, meshLayers))
+                        if (!(Physics.SphereCast(new Ray(triCenter1 + yOffset, direction), radius, direction.magnitude, meshLayers) || Physics.SphereCast(new Ray(triCenter2 + yOffset, -direction), radius, direction.magnitude, meshLayers)))
                         {
-                            //Debug.DrawRay(triCenter1 + yOffset, direction, Color.green, 120);
                             triangles.GetLeaf(new ChunkListIndex(cLIndex.ChunkIndex, leafInd, 0))[listInd].AddNeighbor(triCLI);
                             triangles.GetLeaf(new ChunkListIndex(triCLI.ChunkIndex, triCLI.LeafIndex, 0))[triCLI.ListIndex].AddNeighbor(new ChunkListIndex(cLIndex.ChunkIndex, leafInd, listInd));
-                        }
-                        else
-                        {
-                            Debug.DrawRay(triCenter1 + yOffset, direction, Color.red, 120);
                         }
 
                     }

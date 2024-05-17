@@ -49,8 +49,8 @@ public class NPCIntelligence : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        
-        if(path == null || path.Count == 0) { return; }
+
+        if (path == null || path.Count == 0) { return; }
 
         if (isPathExists)
         {
@@ -60,10 +60,10 @@ public class NPCIntelligence : MonoBehaviour
         {
             Gizmos.color = Color.white;
         }
-        
-        for(int i = 1; i < path.Count; i++)
+
+        for (int i = 1; i < path.Count; i++)
         {
-            Gizmos.DrawLine(path[i-1], path[i]);
+            Gizmos.DrawLine(path[i - 1], path[i]);
         }
 
     }
