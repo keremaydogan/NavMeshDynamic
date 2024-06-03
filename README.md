@@ -77,7 +77,46 @@ After preprocessing, the vertices are added to chunk lists, which are data struc
 
 ### Hierarchical Pathfinding A*
 - **Description**: Utilizes a hierarchical approach to pathfinding by dividing the environment into regions and performing pathfinding at multiple levels of abstraction. This reduces the complexity of pathfinding in large environments.
-- **Usage in Project**: Applied for critical pathfinding tasks to ensure efficient
+- **Usage in Project**: Applied for critical pathfinding tasks to ensure efficient navigation through newly generated areas.
+
+### A* Pathfinding Algorithm
+- **Description**: A widely used algorithm in AI for finding the shortest path between two points. It uses a heuristic to guide the search, balancing between optimality and performance.
+- **Usage in Project**: Integrated to enable AI agents to navigate the dynamically generated navigation meshes efficiently.
+
+### Parallel Processing with Unity's Job System and Burst Compiler
+- **Description**: Utilizes Unity’s Job System to distribute computational tasks across multiple CPU cores and the Burst Compiler to optimize these tasks for performance.
+- **Usage in Project**: Employed for several tasks, including eliminating invalid triangles, arranging vertices, and managing the work system to maintain real-time performance.
+
+### Vertex Merging Algorithm
+- **Description**: Identifies and merges close vertices to reduce the complexity of the navigation mesh. This process involves creating merge information dictionaries for each chunk.
+- **Usage in Project**: Enhances the efficiency of the navigation mesh by reducing the number of vertices and improving data management.
+
+### Triangle Addition and Neighbor Calculation
+- **Description**: Adds triangles to the navigation mesh and calculates neighbors for each triangle. This involves checking for clear paths between nodes and updating the graph structure accordingly.
+- **Usage in Project**: Ensures that the navigation mesh accurately represents walkable areas and their connectivity.
+
+### Conclusion
+The results of the NMD Tool evaluation demonstrate its effectiveness in generating real-time navigation meshes for procedurally expanding game environments. The tool outperforms traditional static navigation meshes, maintaining high accuracy and robust performance across various scenarios. The successful implementation of parallel processing techniques, combined with a well-designed work system, ensures that the tool operates smoothly without compromising game performance. The NMD Tool represents a significant advancement in AI navigation for dynamic game worlds, offering substantial benefits for modern game development. Future work will focus on further optimizations and integrating additional features, such as dynamic obstacle avoidance, to enhance the tool's capabilities. Overall, the NMD Tool provides a scalable and efficient solution for AI navigation in expanding 3D environments, setting the stage for future innovations in real-time game development.
+
+### Impact and Future Directions
+The Navigation Mesh Dynamic Tool (NMD Tool) has the potential to significantly enhance AI navigation in dynamic game environments. By enabling real-time navigation mesh generation, the tool allows game developers to create more immersive and responsive game worlds. This capability is particularly beneficial for procedurally generated maps, where the environment evolves continuously.
+
+#### Enhancing Game Development Processes
+The NMD Tool simplifies the process of integrating AI navigation in expanding environments, eliminating the need for extensive preprocessing associated with static navigation meshes. This real-time generation approach can reduce development time and costs, allowing developers to focus on creating richer and more complex game worlds. The tool's ability to maintain high performance ensures that it can be deployed in commercial games without compromising the gameplay experience.
+
+#### Potential Applications
+- Commercial Games: The NMD Tool can be integrated into a wide range of games, from open-world RPGs to procedurally generated survival games, providing robust and flexible navigation solutions.
+- Educational Tools: The tool can serve as a teaching resource for game development courses, demonstrating advanced techniques in AI navigation and parallel computing.
+- Research and Development: The tool can be used as a platform for further research in AI navigation, dynamic environment handling, and real-time computing.
+
+#### Publication and Deployment
+The results and methodologies of the NMD Tool can be published in academic journals and presented at conferences related to game development and AI. This dissemination will contribute to the broader knowledge base in the field and encourage further innovations. Additionally, the project can be deployed as an open-source tool on platforms like GitHub, allowing the game development community to adopt and adapt the tool for their needs. Clear documentation and user guides will facilitate this process, making it accessible to developers of varying skill levels.
+
+#### Future Directions
+- Enhanced Parallel Programming: One of the primary future directions is to extend the use of parallel programming techniques within the NMD Tool. Applying the Job System and Burst Compiler to more components of the tool will further enhance performance and scalability. This includes parallelizing additional tasks related to navigation mesh generation and updating, ensuring that the tool can handle even larger and more complex game environments.
+- Updating Information Chunks: A critical enhancement involves the ability to update information in chunks that have already been generated. This capability would allow the tool to adapt to changes in previously processed areas, improving the flexibility and responsiveness of AI navigation. Implementing this feature requires sophisticated data management and efficient update algorithms, which will be a focus of future development.
+- Object Avoidance for Pathfinding: Integrating dynamic object avoidance into the pathfinding module is another important future direction. Although this feature is outside the scope of the current project, it will significantly enhance AI behavior, allowing agents to navigate around moving obstacles in real-time. Techniques such as Reciprocal Velocity Obstacles (RVO) will be explored to achieve this functionality.
+- Documentation and Public Deployment: To maximize the impact of the NMD Tool, comprehensive documentation and user guides will be created. This includes detailed explanations of the tool's architecture, usage instructions, and example scenarios. Once the documentation is complete, the tool will be deployed for public use, likely on an open-source platform such as GitHub. This deployment will encourage community contributions and iterative improvements, fostering a collaborative development environment.
 
 
 ## License
