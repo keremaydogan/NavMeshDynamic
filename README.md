@@ -3,6 +3,10 @@
 ## Project Overview
 The Navigation Mesh Dynamic Tool (NMD Tool) is a 3D navigation tool for game AI’s which generates navigation meshes in real-time without causing performance issues. This project runs on the Unity Game Engine and aims to provide seamless navigation for AI agents within complex and dynamically expanding game environments.
 
+
+![PROJECT_POSTER](https://github.com/keremaydogan/NavMeshDynamic/assets/62666688/662e028b-22a1-4c64-8b0b-7e53005ec8a4)
+
+
 ## Team Members
 - Kerem Aydoğan (Student ID: 21945829)
 - Kübra Özdamar (Student ID: 21946481)
